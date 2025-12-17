@@ -21,24 +21,34 @@ public class PingUI extends JFrame {
 
     public PingUI() {
         setUndecorated(true);
-        setSize(500, 350);
+        setSize(400, 350); // reduced width
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
         // Custom border
         getRootPane().setBorder(BorderFactory.createLineBorder(borderColor, 3));
 
-        // Title bar (buttons aligned right)
-        titleBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 5));
+        // Title bar with SPEEDX label
+        titleBar = new JPanel(new BorderLayout());
         titleBar.setBackground(bgColor);
+
+        JLabel titleLabel = new JLabel("SPEEDX");
+        titleLabel.setForeground(fgColor);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+        titleBar.add(titleLabel, BorderLayout.WEST);
 
         JButton closeButton = createCircleIconButton(Color.RED, "X");
         JButton minimizeButton = createCircleIconButton(Color.YELLOW, "_");
         JButton maximizeButton = createCircleIconButton(Color.GREEN, "⬜");
 
-        titleBar.add(minimizeButton);
-        titleBar.add(maximizeButton);
-        titleBar.add(closeButton);
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 5));
+        buttonPanel.setBackground(bgColor);
+        buttonPanel.add(minimizeButton);
+        buttonPanel.add(maximizeButton);
+        buttonPanel.add(closeButton);
+
+        titleBar.add(buttonPanel, BorderLayout.EAST);
 
         // Make window draggable
         titleBar.addMouseListener(new MouseAdapter() {
@@ -63,24 +73,37 @@ public class PingUI extends JFrame {
         logArea.setForeground(fgColor);
         JScrollPane scrollPane = new JScrollPane(logArea);
 
-        // Round toggle button
-        toggleButton = new JButton("Start");
-        toggleButton.setPreferredSize(new Dimension(80, 80));
+        // Circle toggle button
+        toggleButton = new JButton("Start") {
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(80, 80); // fixed square
+            }
+            @Override
+            public Dimension getMinimumSize() {
+                return getPreferredSize();
+            }
+            @Override
+            public Dimension getMaximumSize() {
+                return getPreferredSize();
+            }
+        };
         toggleButton.setFocusPainted(false);
         toggleButton.setBorder(BorderFactory.createEmptyBorder());
         toggleButton.setFont(new Font("Arial", Font.BOLD, 14));
         toggleButton.setContentAreaFilled(false);
         toggleButton.setOpaque(false);
 
-        // Custom round paint
+        // Custom circle paint
         toggleButton.setUI(new javax.swing.plaf.basic.BasicButtonUI() {
             @Override
             public void paint(Graphics g, JComponent c) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+                int diameter = Math.min(c.getWidth(), c.getHeight()); // always circle
                 g2.setColor(running ? activeColor : new Color(70, 70, 70));
-                g2.fillOval(0, 0, c.getWidth(), c.getHeight());
+                g2.fillOval(0, 0, diameter, diameter);
 
                 g2.setColor(fgColor);
                 FontMetrics fm = g2.getFontMetrics();
@@ -88,6 +111,7 @@ public class PingUI extends JFrame {
                 int x = (c.getWidth() - fm.stringWidth(text)) / 2;
                 int y = (c.getHeight() + fm.getAscent()) / 2 - 4;
                 g2.drawString(text, x, y);
+
                 g2.dispose();
             }
         });
@@ -142,10 +166,10 @@ public class PingUI extends JFrame {
             public void paint(Graphics g, JComponent c) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int diameter = Math.min(c.getWidth(), c.getHeight());
                 g2.setColor(circleColor);
-                g2.fillOval(0, 0, c.getWidth(), c.getHeight());
+                g2.fillOval(0, 0, diameter, diameter);
 
-                // Draw icon text centered
                 g2.setColor(Color.BLACK);
                 FontMetrics fm = g2.getFontMetrics();
                 String text = ((JButton) c).getText();
