@@ -11,7 +11,7 @@ import java.util.prefs.Preferences;
 
 public class PingUI extends JFrame {
     // App version for update check
-    private static final String CURRENT_VERSION = "1.0.0";
+    private static final String CURRENT_VERSION = "0.0.2";
 
     // Change this to control how many launches trigger the subscription popup
     private static final int MAX_LAUNCH_COUNT = 100;
@@ -272,7 +272,7 @@ public class PingUI extends JFrame {
     // Check for updates from GitHub
     private void checkForUpdates() {
         try {
-            URL url = new URL("https://raw.githubusercontent.com/<your-username>/<repo-name>/main/version.txt");
+            URL url = new URL("https://raw.githubusercontent.com/amiztp/HutchBandwith/main/version.txt");
             BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
             String latestVersion = in.readLine().trim();
             in.close();
