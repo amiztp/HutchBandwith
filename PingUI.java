@@ -7,9 +7,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.URL;
+import java.util.prefs.Preferences;
 
 public class PingUI extends JFrame {
-    private static final String CURRENT_VERSION = "1.0.0"; // your app version
+    // App version for update check
+    private static final String CURRENT_VERSION = "1.0.0";
+
+    // Change this to control how many launches trigger the subscription popup
+    private static final int MAX_LAUNCH_COUNT = 100;
+
     private JTextArea logArea;
     private JButton toggleButton;
     private JPanel titleBar;
@@ -17,19 +23,21 @@ public class PingUI extends JFrame {
     private Thread pingThread;
     private Point initialClick;
 
-    // Colors
+    // Theme colors
     private final Color bgColor = new Color(30, 30, 30);
     private final Color fgColor = new Color(200, 200, 200);
-    private final Color activeColor = new Color(0, 150, 0); // green
+    private final Color activeColor = new Color(0, 150, 0);
     private final Color borderColor = new Color(80, 80, 80);
 
+    // Lock state
+    private boolean locked = false;
+
     public PingUI() {
+        // Frame setup
         setUndecorated(true);
-        setSize(400, 350); // reduced width
+        setSize(400, 350);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-
-        // Custom border
         getRootPane().setBorder(BorderFactory.createLineBorder(borderColor, 3));
 
         // Title bar with SPEEDX label
@@ -78,10 +86,9 @@ public class PingUI extends JFrame {
         JScrollPane scrollPane = new JScrollPane(logArea);
 
         // Auto-clear logs every 30 seconds
-        Timer clearTimer = new Timer(180000, e -> {
-            
-            logArea.setText(""); // clear all logs
-            logArea.append("Logs Auto Cleared\n");
+        Timer clearTimer = new Timer(30000, e -> {
+            logArea.append("Auto Clearing Logs\n");
+            logArea.setText("");
         });
         clearTimer.start();
 
@@ -89,7 +96,7 @@ public class PingUI extends JFrame {
         toggleButton = new JButton("Start") {
             @Override
             public Dimension getPreferredSize() {
-                return new Dimension(80, 80); // fixed square
+                return new Dimension(80, 80);
             }
         };
         toggleButton.setFocusPainted(false);
@@ -104,18 +111,15 @@ public class PingUI extends JFrame {
             public void paint(Graphics g, JComponent c) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int diameter = Math.min(c.getWidth(), c.getHeight()); // always circle
+                int diameter = Math.min(c.getWidth(), c.getHeight());
                 g2.setColor(running ? activeColor : new Color(70, 70, 70));
                 g2.fillOval(0, 0, diameter, diameter);
-
                 g2.setColor(fgColor);
                 FontMetrics fm = g2.getFontMetrics();
                 String text = ((JButton) c).getText();
                 int x = (c.getWidth() - fm.stringWidth(text)) / 2;
                 int y = (c.getHeight() + fm.getAscent()) / 2 - 4;
                 g2.drawString(text, x, y);
-
                 g2.dispose();
             }
         });
@@ -124,12 +128,14 @@ public class PingUI extends JFrame {
         controlPanel.setBackground(bgColor);
         controlPanel.add(toggleButton);
 
+        // Add components
         add(titleBar, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
         add(controlPanel, BorderLayout.SOUTH);
 
-        // Actions
+        // Button actions
         toggleButton.addActionListener(e -> {
+            if (locked) return;
             if (!running) {
                 running = true;
                 toggleButton.setText("Stop");
@@ -154,10 +160,67 @@ public class PingUI extends JFrame {
             }
         });
 
-        // Check for updates on startup
-        checkForUpdates();
+        // Delayed update check (2 minutes after launch)
+        Timer updateTimer = new Timer(120000, e -> checkForUpdates());
+        updateTimer.setRepeats(false);
+        updateTimer.start();
+
+        // Launch counter check
+        checkLaunchCount();
     }
 
+    // ===== Launch counter with subscription popup =====
+    private void checkLaunchCount() {
+        Preferences prefs = Preferences.userNodeForPackage(PingUI.class);
+        int launchCount = prefs.getInt("launchCount", 0);
+        launchCount++;
+        prefs.putInt("launchCount", launchCount);
+
+        if (launchCount >= MAX_LAUNCH_COUNT) {
+            JTextArea message = new JTextArea(
+                "⚠️ Subscription Required ⚠️\n\n" +
+                "If you want to continue using this tweak application on your device,\n" +
+                "make a lifetime subscription once for just 500 LKR.\n\n" +
+                "Account Details: 92353798\n" +
+                "Account Name: MAT PERERA\n" +
+                "Send receipt to: 0762383636\n\n" +
+                "The program will be sent to you within 24 Hours."
+            );
+            message.setEditable(false);
+            message.setBackground(Color.RED);
+            message.setForeground(Color.WHITE);
+            message.setFont(new Font("Arial", Font.BOLD, 14));
+
+            JOptionPane.showMessageDialog(this, message,
+                "Subscription Required", JOptionPane.WARNING_MESSAGE);
+
+            // Lock the app for further usage
+            lockApp();
+
+            // Optionally reset counter
+            prefs.putInt("launchCount", 0);
+        }
+    }
+
+    // Lock the app for further usage
+    private void lockApp() {
+        locked = true;
+        toggleButton.setEnabled(false);
+        logArea.setText("Application locked. Please subscribe to continue.");
+        logArea.setBackground(Color.DARK_GRAY);
+        logArea.setForeground(Color.RED);
+        titleBar.setBackground(Color.DARK_GRAY);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            PingUI ui = new PingUI();
+            ui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            ui.setVisible(true);
+        });
+    }
+
+    // Create Apple-style circular buttons
     private JButton createCircleIconButton(Color circleColor, String iconText) {
         JButton b = new JButton(iconText);
         b.setPreferredSize(new Dimension(25, 25));
@@ -176,7 +239,6 @@ public class PingUI extends JFrame {
                 int diameter = Math.min(c.getWidth(), c.getHeight());
                 g2.setColor(circleColor);
                 g2.fillOval(0, 0, diameter, diameter);
-
                 g2.setColor(Color.BLACK);
                 FontMetrics fm = g2.getFontMetrics();
                 String text = ((JButton) c).getText();
@@ -189,19 +251,17 @@ public class PingUI extends JFrame {
         return b;
     }
 
+    // Ping loop
     private void pingLoop() {
         String host = "www.hutch.lk";
         while (running) {
             try {
                 InetAddress inet = InetAddress.getByName(host);
                 boolean reachable = inet.isReachable(5000);
-
                 String result = reachable
                         ? "Speeding Up Your Connection"
                         : "Retrying To Speed Your Connection";
-
                 logArea.append(result + "\n");
-
                 Thread.sleep(10000);
             } catch (IOException | InterruptedException ex) {
                 logArea.append("Error: " + ex.getMessage() + "\n");
@@ -209,10 +269,9 @@ public class PingUI extends JFrame {
         }
     }
 
-    // Update check feature
+    // Check for updates from GitHub
     private void checkForUpdates() {
         try {
-            // Replace <user>/<repo> with your GitHub repo path
             URL url = new URL("https://raw.githubusercontent.com/<your-username>/<repo-name>/main/version.txt");
             BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
             String latestVersion = in.readLine().trim();
@@ -227,12 +286,5 @@ public class PingUI extends JFrame {
         } catch (Exception e) {
             logArea.append("Update check failed: " + e.getMessage() + "\n");
         }
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            PingUI ui = new PingUI();
-            ui.setVisible(true);
-        });
     }
 }
