@@ -2,10 +2,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.URL;
 
 public class PingUI extends JFrame {
+    private static final String CURRENT_VERSION = "1.0.0"; // your app version
     private JTextArea logArea;
     private JButton toggleButton;
     private JPanel titleBar;
@@ -73,19 +77,19 @@ public class PingUI extends JFrame {
         logArea.setForeground(fgColor);
         JScrollPane scrollPane = new JScrollPane(logArea);
 
+        // Auto-clear logs every 30 seconds
+        Timer clearTimer = new Timer(180000, e -> {
+            
+            logArea.setText(""); // clear all logs
+            logArea.append("Logs Auto Cleared\n");
+        });
+        clearTimer.start();
+
         // Circle toggle button
         toggleButton = new JButton("Start") {
             @Override
             public Dimension getPreferredSize() {
                 return new Dimension(80, 80); // fixed square
-            }
-            @Override
-            public Dimension getMinimumSize() {
-                return getPreferredSize();
-            }
-            @Override
-            public Dimension getMaximumSize() {
-                return getPreferredSize();
             }
         };
         toggleButton.setFocusPainted(false);
@@ -149,6 +153,9 @@ public class PingUI extends JFrame {
                 setExtendedState(JFrame.MAXIMIZED_BOTH);
             }
         });
+
+        // Check for updates on startup
+        checkForUpdates();
     }
 
     private JButton createCircleIconButton(Color circleColor, String iconText) {
@@ -199,6 +206,26 @@ public class PingUI extends JFrame {
             } catch (IOException | InterruptedException ex) {
                 logArea.append("Error: " + ex.getMessage() + "\n");
             }
+        }
+    }
+
+    // Update check feature
+    private void checkForUpdates() {
+        try {
+            // Replace <user>/<repo> with your GitHub repo path
+            URL url = new URL("https://raw.githubusercontent.com/<your-username>/<repo-name>/main/version.txt");
+            BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+            String latestVersion = in.readLine().trim();
+            in.close();
+
+            if (!CURRENT_VERSION.equals(latestVersion)) {
+                JOptionPane.showMessageDialog(this,
+                        "A new version (" + latestVersion + ") is available!\nPlease update the app.",
+                        "Update Available",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception e) {
+            logArea.append("Update check failed: " + e.getMessage() + "\n");
         }
     }
 
